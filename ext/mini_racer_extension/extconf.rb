@@ -8,6 +8,7 @@ require 'rubygems/package'
 
 IS_SOLARIS = RUBY_PLATFORM =~ /solaris/
 IS_LINUX_MUSL = RUBY_PLATFORM =~ /linux-musl/
+IS_INTEL = RUBY_PLATFORM =~ /x86_64/
 
 def cppflags_clear_std!
   $CPPFLAGS.gsub! /-std=[^\s]+/, ''
@@ -22,7 +23,7 @@ def cppflags_add_cpu_extension!
     $CPPFLAGS += " -mavx2"
   else
     $CPPFLAGS += " -mssse3"
-  end
+  end if IS_INTEL
 end
 
 def libv8_gem_name
