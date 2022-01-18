@@ -583,6 +583,10 @@ raise FooError, "I like foos"
 
     equals_after_sleep = {}
 
+    # workaround Rubies prior to commit 475c8701d74ebebe
+    # (Make SecureRandom support Ractor, 2020-09-04)
+    SecureRandom.hex
+
     (1..10).map do |i|
       Thread.new {
         random = SecureRandom.hex
@@ -986,5 +990,36 @@ raise FooError, "I like foos"
     end
 
     assert_equal(3, context.eval("instance.exports.add(1,2)"))
+  end
+
+  class ReproError < StandardError
+    def initialize(response)
+      super("response said #{response.code}")
+    end
+  end
+
+  Response = Struct.new(:code)
+
+  def test_exception_objects
+    context = MiniRacer::Context.new
+    context.attach('repro', lambda {
+      raise ReproError.new(Response.new(404))
+    })
+    assert_raises(ReproError) do
+      context.eval('repro();')
+    end
+  end
+
+  def test_timeout
+    context = MiniRacer::Context.new(timeout: 500, max_memory: 20_000_000)
+    assert_raises(MiniRacer::ScriptTerminatedError) do
+      context.eval <<~JS
+        var doit = async() => {
+        while (true)
+          await new Promise(resolve => resolve())
+        }
+        doit();
+        JS
+    end
   end
 end
